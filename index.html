@@ -60,10 +60,16 @@
         <span>Deep Time<b>Archive</b></span>
       </a>
       <p class="hud__section" data-hud-section>ARCHIVE // INDEX</p>
-      <button class="snd" type="button" data-sound aria-pressed="false">
-        <span class="snd__bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-        <span data-sound-label>SOUND OFF</span>
-      </button>
+      <div class="hud__actions">
+        <button class="idx-btn" type="button" data-index-open aria-haspopup="dialog" aria-controls="index" aria-label="Species index">
+          <span class="idx-btn__grid" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span>Species index</span>
+        </button>
+        <button class="snd" type="button" data-sound aria-pressed="false">
+          <span class="snd__bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span data-sound-label>SOUND OFF</span>
+        </button>
+      </div>
     </header>
     <div class="hud__readout" aria-live="off">
       <span class="k">Temporal position</span>
@@ -80,6 +86,37 @@
     <div class="hud__meta" aria-hidden="true">
       <span data-hud-xy>X 0.000  Y 0.000</span>
       <span>Scan <b data-hud-pct>000</b>%</span>
+    </div>
+  </div>
+
+  <!-- Species index -->
+  <div class="index" id="index" role="dialog" aria-modal="true" aria-labelledby="index-title" hidden data-lenis-prevent>
+    <div class="index__inner">
+      <header class="index__head">
+        <div class="index__heading">
+          <span class="chip">Specimen archive · 16 records</span>
+          <h2 class="index__title" id="index-title">Species index</h2>
+          <p class="index__lede">Every key animal in the descent, in order of appearance. Select a card to jump to its reconstruction.</p>
+        </div>
+        <button type="button" class="index__close" data-index-close><span>Close</span><i aria-hidden="true">✕</i></button>
+      </header>
+      <nav class="index__chapters" aria-label="Chapters">
+        <button type="button" data-chapter="#prologue"><b>00</b>The Great Dying</button>
+        <button type="button" data-chapter="#rise"><b>01</b>Archosaurs</button>
+        <button type="button" data-chapter="#lineage"><b>02</b>Family tree</button>
+        <button type="button" data-chapter="#triassic"><b>I</b>Triassic</button>
+        <button type="button" data-chapter="#jurassic"><b>II</b>Jurassic</button>
+        <button type="button" data-chapter="#cretaceous"><b>III</b>Cretaceous</button>
+        <button type="button" data-chapter="#impact"><b>K–Pg</b>Impact</button>
+        <button type="button" data-chapter="#epilogue"><b>NOW</b>Epilogue</button>
+      </nav>
+      <div class="index__filters" role="group" aria-label="Filter by period">
+        <button type="button" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" data-filter="triassic" aria-pressed="false">Triassic</button>
+        <button type="button" data-filter="jurassic" aria-pressed="false">Jurassic</button>
+        <button type="button" data-filter="cretaceous" aria-pressed="false">Cretaceous</button>
+      </div>
+      <ul class="index__grid"></ul>
     </div>
   </div>
 

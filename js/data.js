@@ -327,3 +327,32 @@ export const BIRD = {
 };
 
 export const LENGTH_MAX = 36; // metres, scale ruler maximum
+
+// Photoreal models, generated with Tripo H3.1 image-to-3D from reference images.
+// Each loads from assets/models/<id>.glb when present, otherwise from the generation CDN.
+// flip / headLow correct the automatic head-end detection for these body shapes.
+const MODEL_CDN = 'https://d8j0ntlcm91z4.cloudfront.net/user_37bkw7MyT63LckpQcXTvoyynvvk/';
+const MODEL_FILES = {
+  euparkeria: 'hf_20260924_090033_6fff7758-8ce2-4f84-ae33-ad2342a9b2b2',
+  eoraptor: 'hf_20260924_090036_b0878eb8-00f9-47f0-9ff9-a75e1b0112ab',
+  herrerasaurus: 'hf_20260924_090041_9f8f5f09-9f01-462b-a934-29a075d6d4c7',
+  coelophysis: 'hf_20260924_090045_b18c5036-03c1-4845-87aa-5bc7f7587919',
+  plateosaurus: 'hf_20260924_090048_302ea259-4bc0-417f-8800-4252170982d3',
+  dilophosaurus: 'hf_20260924_090053_304b3052-1cd4-42f0-93e2-5188172e0210',
+  stegosaurus: 'hf_20260924_090058_f7c2765a-8010-494e-975a-7fba91ad782e',
+  brachiosaurus: 'hf_20260924_090101_fc94c5c0-ff86-48ce-9099-b3d43bcd9764',
+  allosaurus: 'hf_20260924_090109_7cac5c92-c7d6-4612-b619-aa231c020a10',
+  archaeopteryx: 'hf_20260924_090113_77353541-72c1-46d6-877b-9660bd9be257',
+  spinosaurus: 'hf_20260924_090117_06c4c38b-08bc-46dc-acbf-ab120d628f75',
+  argentinosaurus: 'hf_20260924_090123_920569c2-4f40-41d4-89ce-998b9a7e77f2',
+  velociraptor: 'hf_20260924_090127_70ac8c94-37cf-4f15-83a9-8d77ab8b6657',
+  ankylosaurus: 'hf_20260924_090131_e0ef3bf7-bfc4-4a2f-9d37-ed97630139f7',
+  triceratops: 'hf_20260924_090135_e50bd11e-3bfe-47b2-a633-5bec831b5aa2',
+  trex: 'hf_20260924_090022_94eef19d-450b-4605-bb05-521e434ef6e8',
+};
+export const MODELS = Object.fromEntries(
+  Object.entries(MODEL_FILES).map(([id, f]) => [id, { sources: [`assets/models/${id}.glb`, `${MODEL_CDN}${f}.glb`] }])
+);
+MODELS.stegosaurus.headLow = true;
+MODELS.velociraptor.flip = true;
+MODELS.ankylosaurus.flip = true;

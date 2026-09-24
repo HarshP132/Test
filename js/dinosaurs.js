@@ -692,7 +692,7 @@ const BUILDERS = {
 
 /* ------------------------------------------------------------------ */
 
-const FIT = { x: 5.4, y: 3.3, z: 5.2 };
+export const FIT = { x: 5.4, y: 3.3, z: 5.2 };
 
 export function buildSpecimen(id, N, seed = 7) {
   const b = new Builder(seed + id.length * 131);

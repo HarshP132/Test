@@ -57,7 +57,27 @@ export class Specimen {
     this.yawVel = 0;
     this.lift = 0;
     this.visibility = 0;
+    this.models = {};
+    this.active = null;
+    this.reveal = 0;
+    this.suppressMesh = false;
     this.show(first.id, true);
+  }
+
+  // A photoreal model arrived: particles adopt its surface, and it dissolves in once they settle.
+  addModel(model) {
+    this.models[model.id] = model;
+    this.shapes[model.id] = model.shape;
+    model.uniforms.uEdgeColor.value = this.u.uColorA.value;
+    this.points.add(model.group);
+    if (this.current === model.id) {
+      this.current = null;
+      this.show(model.id);
+    }
+  }
+
+  get modelShown() {
+    return this.reveal > 0.98;
   }
 
   // Freeze what is on screen now into aFrom so a new morph starts from it.
@@ -124,7 +144,21 @@ export class Specimen {
     this.userYaw += this.yawVel;
     this.yaw.rotation.y = this.baseYaw + Math.sin(t * 0.22) * 0.16 + this.userYaw;
     this.points.position.y = this.lift + Math.sin(t * 0.9) * 0.05 * (0.3 + this.lift);
-    this.u.uAlpha.value = this.visibility;
+    const want = this.models[this.current] || null;
+    if (this.active && this.active !== want) {
+      this.reveal = Math.max(0, this.reveal - dt / 0.45);
+      if (this.reveal === 0) { this.active.group.visible = false; this.active = null; }
+    } else if (want) {
+      this.active = want;
+      const ready = this.u.uMorph.value > 0.97 && !this.suppressMesh && this.visibility > 0.6;
+      this.reveal = ready ? Math.min(1, this.reveal + dt / 2.4) : Math.max(0, this.reveal - dt / 0.45);
+    }
+    if (this.active) {
+      const r = this.reveal;
+      this.active.group.visible = r > 0.001;
+      this.active.uniforms.uReveal.value = r * r * (3 - 2 * r);
+    }
+    this.u.uAlpha.value = this.visibility * (1 - 0.86 * this.reveal);
     this.padU.uOpacity.value = 0.9 * this.visibility * (1 - this.u.uDisperse.value);
     this.group.visible = this.visibility > 0.002;
   }

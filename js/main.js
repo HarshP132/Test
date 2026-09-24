@@ -1,9 +1,11 @@
-import { SPECIES, ERAS, BIRD } from './data.js';
+import { SPECIES, ERAS, BIRD, MODELS } from './data.js';
 import { buildSpecimen, SPECIMEN_IDS } from './dinosaurs.js';
 import { World } from './world.js';
 import { Sound } from './audio.js';
 import { Hud } from './hud.js';
 import { renderSpecies } from './content.js';
+import { ModelLibrary } from './models.js';
+import { SpeciesIndex } from './menu.js';
 
 gsap.registerPlugin(ScrollTrigger, SplitText, ScrambleTextPlugin);
 
@@ -57,6 +59,21 @@ async function boot() {
     console.warn('WebGL unavailable, continuing without the 3D layer.', err);
     root.classList.add('no-webgl');
   }
+  const procShapes = { ...shapes };
+  const models = world ? new ModelLibrary(MODELS, N) : null;
+  const added = new Set();
+  const ensureModel = (id) => {
+    if (!models || !models.has(id)) return Promise.resolve(null);
+    return models.load(id, procShapes[id]).then((m) => {
+      if (!added.has(id)) { added.add(id); world.specimen.addModel(m); }
+      return m;
+    }).catch(() => null);
+  };
+  const specimenOrder = [...document.querySelectorAll('main [data-specimen]')].map((s) => s.dataset.specimen)
+    .filter((id, i, a) => a.indexOf(id) === i);
+
+  if (/[?&]debug\b/.test(location.search)) window.DT = { world, models, gsap };
+
   loader.set(0.9, 'Calibrating temporal drive');
   await Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 2500))]);
   if (world) { world.render(0.016, 0); await frame(); }
@@ -72,6 +89,16 @@ async function boot() {
   });
   gsap.ticker.add((t) => lenis.raf(t * 1000));
   gsap.ticker.lagSmoothing(0);
+
+  const index = new SpeciesIndex({
+    shapes: procShapes,
+    onGo: (target) => {
+      const t = document.querySelector(target);
+      if (t) lenis.scrollTo(t, { immediate: true, force: true });
+    },
+    onOpen: () => lenis.stop(),
+    onClose: () => lenis.start(),
+  });
 
   document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', (e) => {
     e.preventDefault();
@@ -106,13 +133,13 @@ async function boot() {
     if (world) world.mouse.set(nx * 2 - 1, -(ny * 2 - 1));
     hud.setPointer(nx * 2 - 1, -(ny * 2 - 1));
     cx(e.clientX); cy(e.clientY);
-    const overUI = e.target.closest('a, button, .card, .tl');
+    const overUI = e.target.closest('a, button, .card, .tl, .index');
     cursor.classList.toggle('is-link', !!e.target.closest('a, button'));
     cursor.classList.toggle('is-drag', !!world && world.mode === 'specimen' && !overUI && (world.tall || nx > 0.45));
     if (drag && world) { world.specimen.nudge(e.clientX - drag.x); drag.x = e.clientX; }
   });
   window.addEventListener('pointerdown', (e) => {
-    if (!world || world.mode !== 'specimen' || e.target.closest('a, button, .card, .tl')) return;
+    if (!world || world.mode !== 'specimen' || e.target.closest('a, button, .card, .tl, .index')) return;
     drag = { x: e.clientX };
     root.classList.add('is-dragging');
   });
@@ -153,6 +180,9 @@ async function boot() {
       gsap.to(world.after, { recover: after ? 1 : 0, reform: after ? 1 : 0, duration: after ? 3.2 : 1.2, ease: 'power2.inOut', overwrite: true });
       if (d.specimen) {
         if (world.specimen.show(d.specimen)) sound.whoosh();
+        ensureModel(d.specimen);
+        const k = specimenOrder.indexOf(d.specimen);
+        specimenOrder.slice(k + 1, k + 3).forEach((id) => ensureModel(id));
         const info = d.specimen === 'bird' ? BIRD : SPECIES_BY_ID[d.specimen];
         hud.setAnnos(info?.annotations);
       } else {
@@ -181,7 +211,13 @@ async function boot() {
   /* ---------------- Intro ---------------- */
   ScrollTrigger.refresh();
   await new Promise((r) => setTimeout(r, reduced ? 0 : 450));
-  const intro = gsap.timeline({ onComplete: () => lenis.start() });
+  const intro = gsap.timeline({
+    onComplete: () => {
+      lenis.start();
+      // Warm up the first model; the rest stream in just ahead of the reader.
+      ensureModel(specimenOrder[0]);
+    },
+  });
   intro
     .to('.loader__inner', { autoAlpha: 0, y: -20, duration: 0.5, ease: 'power2.in' })
     .to(loader.el, { clipPath: 'inset(0 0 100% 0)', duration: 1.1, ease: 'expo.inOut' }, '>-0.1')

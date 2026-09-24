@@ -4,6 +4,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { starVert, starFrag, planetVert, nebulaFrag, finalShader } from './shaders.js';
 import { Planet, PLANET_PALETTES } from './planet.js';
 import { Specimen } from './specimen.js';
@@ -46,6 +47,7 @@ export class World {
     this.look = new THREE.Vector3(0, 0, 0);
 
     this._sky();
+    this._lights();
 
     this.planet = new Planet();
     this.scene.add(this.planet.group);
@@ -62,7 +64,7 @@ export class World {
 
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.8, 0.5, 0.42);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.8, 0.5, 0.6);
     this.composer.addPass(this.bloom);
     this.final = new ShaderPass(finalShader);
     this.final.uniforms.uTint.value = new THREE.Color('#ff3b2f');
@@ -77,6 +79,21 @@ export class World {
     this.pose = { px: 0, py: 0, pz: 0, ps: 1, po: 1, sx: 0, sy: 0, sz: 0, ss: 1, so: 0, lock: 0 };
     this.resize();
     this.setMode('hero', true);
+  }
+
+  // Studio lighting for the photoreal models; the shader-driven scene ignores it.
+  _lights() {
+    const pm = new THREE.PMREMGenerator(this.renderer);
+    this.scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+    this.scene.environmentIntensity = 0.55;
+    pm.dispose();
+    this.scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x2a2018, 0.45));
+    const key = new THREE.DirectionalLight(0xfff1dd, 2.0);
+    key.position.set(-4, 6, 6);
+    this.scene.add(key);
+    this.rimLight = new THREE.DirectionalLight(0x7df9ff, 2.2);
+    this.rimLight.position.set(5, 3, -6);
+    this.scene.add(this.rimLight);
   }
 
   _sky() {
@@ -155,6 +172,7 @@ export class World {
     tw(u.uGrid.value, accent);
     tw(this.planet.au.uColor.value, pal === 'impact' ? '#ff6a3d' : '#5fd8ff');
     this.specimen.setColors(accent, accent2, dur);
+    tw(this.rimLight.color, accent);
   }
 
   setDrift(d, dur = 2.4) {
@@ -181,6 +199,7 @@ export class World {
     sp.visibility = P.so;
     sp.u.uDisperse.value = fx.disperse * (1 - af.reform);
     sp.u.uGlitch.value = Math.min(1, fx.alarm * 0.6 + Math.max(0, fx.disperse - 0.02) * 2) * (1 - af.reform) * (fx.disperse < 0.98 ? 1 : 0);
+    sp.suppressMesh = sp.u.uDisperse.value > 0.001;
     sp.update(dt, t);
 
     this.starU.uTime.value = t;
