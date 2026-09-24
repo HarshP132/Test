@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en" data-era="archive">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Deep Time Archive</title>
+  <meta name="description" content="An interactive 3D journey through 186 million years of dinosaur evolution, from the Great Dying to the Chicxulub asteroid impact.">
+  <meta name="theme-color" content="#02050a">
+  <meta property="og:title" content="Deep Time Archive">
+  <meta property="og:description" content="Descend 186 million years through the rise and fall of the dinosaurs.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%237df9ff' stroke-width='2'/%3E%3Cellipse cx='16' cy='16' rx='15' ry='5' fill='none' stroke='%237df9ff' stroke-width='1.2' transform='rotate(-25 16 16)'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@300;400;500&family=Syncopate:wght@400;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/SplitText.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrambleTextPlugin.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js" defer></script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <canvas id="scene" aria-hidden="true"></canvas>
+  <div class="fx-overlay" aria-hidden="true"></div>
+  <div class="annos" aria-hidden="true"></div>
+
+  <!-- Loader -->
+  <div class="loader" role="status" aria-live="polite">
+    <div class="loader__inner">
+      <svg class="loader__mark" viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="32" cy="32" r="17" />
+        <ellipse cx="32" cy="32" rx="30" ry="9" transform="rotate(-25 32 32)" />
+        <circle cx="32" cy="32" r="3" class="fill" />
+      </svg>
+      <p class="loader__k">Deep Time Archive · Chrono-link</p>
+      <div class="loader__num"><span data-load-num>000</span><i>%</i></div>
+      <div class="loader__bar"><i></i></div>
+      <p class="loader__msg" data-load-msg>Establishing uplink</p>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div class="hud">
+    <span class="hud__corner hud__corner--tl"></span>
+    <span class="hud__corner hud__corner--tr"></span>
+    <span class="hud__corner hud__corner--bl"></span>
+    <span class="hud__corner hud__corner--br"></span>
+    <header class="hud__top">
+      <a class="brand" href="#hero" data-go="#hero" aria-label="Deep Time Archive, back to start">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="15" /><ellipse cx="32" cy="32" rx="29" ry="9" transform="rotate(-25 32 32)" /></svg>
+        <span>Deep Time<b>Archive</b></span>
+      </a>
+      <p class="hud__section" data-hud-section>ARCHIVE // INDEX</p>
+      <button class="snd" type="button" data-sound aria-pressed="false">
+        <span class="snd__bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span data-sound-label>SOUND OFF</span>
+      </button>
+    </header>
+    <div class="hud__readout" aria-live="off">
+      <span class="k">Temporal position</span>
+      <div class="mya"><span data-hud-mya>252.0</span><small>MYA</small></div>
+      <span class="k">Period · <b data-hud-era>ARCHIVE</b></span>
+    </div>
+    <nav class="tl" aria-label="Geologic timeline">
+      <button type="button" class="tl__seg" style="--h:24.5%" data-go="#triassic"><span>Triassic</span></button>
+      <button type="button" class="tl__seg" style="--h:27.2%" data-go="#jurassic"><span>Jurassic</span></button>
+      <button type="button" class="tl__seg" style="--h:38.3%" data-go="#cretaceous"><span>Cretaceous</span></button>
+      <button type="button" class="tl__seg" style="--h:10%" data-go="#epilogue"><span>Now</span></button>
+      <div class="tl__marker" aria-hidden="true"><span class="tl__val">252.0</span></div>
+    </nav>
+    <div class="hud__meta" aria-hidden="true">
+      <span data-hud-xy>X 0.000  Y 0.000</span>
+      <span>Scan <b data-hud-pct>000</b>%</span>
+    </div>
+  </div>
+
+  <div class="cursor" aria-hidden="true">
+    <i class="cursor__ring"></i><i class="cursor__dot"></i><span class="cursor__lbl">Drag to rotate</span>
+  </div>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero" id="hero" data-mode="hero" data-era="archive" data-mya="252" data-drift="0" data-label="ARCHIVE // INDEX">
+      <div class="hero__inner">
+        <p class="hero__eyebrow"><span class="chip">Chrono-survey · Mesozoic Era</span></p>
+        <h1 class="hero__title">Deep Time</h1>
+        <p class="hero__lede">Descend 186 million years through the reign of the dinosaurs, from the survivors of Earth’s worst extinction to the asteroid that ended their age.</p>
+        <dl class="hero__meta">
+          <div><dt>Span</dt><dd>252 → 66 MYA</dd></div>
+          <div><dt>Periods</dt><dd>Triassic · Jurassic · Cretaceous</dd></div>
+          <div><dt>Specimens</dt><dd>15 reconstructed</dd></div>
+        </dl>
+        <button type="button" class="hero__cue" data-go="#prologue"><span>Scroll to begin descent</span><i aria-hidden="true"></i></button>
+      </div>
+    </section>
+
+    <!-- PROLOGUE -->
+    <section class="panel" id="prologue" data-mode="planet" data-era="permian" data-mya="252" data-drift="0" data-label="CHAPTER 00 // THE GREAT DYING">
+      <div class="col">
+        <span class="chip chip--warn" data-reveal>Chapter 00 · Permian–Triassic boundary</span>
+        <h2 class="h2" data-split>The Great Dying</h2>
+        <p class="lede" data-reveal>252 million years ago, colossal volcanic eruptions in what is now Siberia poured lava and greenhouse gases into the world over thousands of years. Oceans warmed, turned acidic and lost their oxygen. It was the worst mass extinction in Earth’s history.</p>
+        <p class="lede" data-reveal>Life nearly vanished. From a handful of survivors, a new world would be built.</p>
+        <dl class="stats stats--3" data-reveal>
+          <div class="stat"><dt>Marine species lost</dt><dd><strong>≈ 90%</strong></dd></div>
+          <div class="stat"><dt>Land vertebrate species lost</dt><dd><strong>≈ 70%</strong></dd></div>
+          <div class="stat"><dt>Primary cause</dt><dd>Siberian Traps eruptions</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- RISE OF THE ARCHOSAURS -->
+    <section class="panel" id="rise" data-mode="specimen" data-specimen="euparkeria" data-era="triassic" data-mya="247" data-drift="0" data-label="CHAPTER 01 // RULING REPTILES">
+      <div class="col">
+        <span class="chip" data-reveal>Chapter 01 · Early Triassic</span>
+        <h2 class="h2" data-split>From the ashes, the archosaurs</h2>
+        <p class="lede" data-reveal>Among the survivors were the archosaurs, the “ruling reptiles”. Within a few million years they split into two great lines: one leading to crocodiles, the other to pterosaurs and dinosaurs.</p>
+        <p class="lede" data-reveal>Their breakthrough was posture. Legs moved from sprawling out to the sides toward standing beneath the body, which made running more efficient and let the chest breathe while moving.</p>
+      </div>
+    </section>
+
+    <div data-slot="precursor"></div>
+
+    <!-- LINEAGE -->
+    <section class="panel lineage" id="lineage" data-mode="lineage" data-era="triassic" data-mya="240" data-drift="0" data-label="CHAPTER 02 // LINEAGE DECODER">
+      <div class="lineage__inner">
+        <div class="col">
+          <span class="chip" data-reveal>Chapter 02 · Lineage decoder</span>
+          <h2 class="h2" data-split>Reading the family tree</h2>
+          <p class="lede" data-reveal>Dinosaurs appeared around 233 million years ago. Almost immediately they split into two branches, told apart by the shape of the hip. The highlighted route traces the one line that never ended.</p>
+        </div>
+        <div class="tree-wrap" role="region" aria-label="Dinosaur family tree, scrollable" tabindex="0">
+          <svg class="tree" viewBox="0 0 1060 590" role="img" aria-labelledby="tree-t">
+            <title id="tree-t">Simplified archosaur family tree showing the split into crocodile and dinosaur lines, the ornithischian and saurischian dinosaurs, and the theropod line leading to birds.</title>
+            <g class="tree__edges">
+              <path class="tree__edge tree__edge--hot" d="M20 300 H130" />
+              <path class="tree__edge" d="M130 300 V70 H760" />
+              <path class="tree__edge tree__edge--hot" d="M130 300 V330 H250" />
+              <path class="tree__edge" d="M250 330 V140 H760" />
+              <path class="tree__edge tree__edge--hot" d="M250 330 V360 H370" />
+              <path class="tree__edge" d="M370 360 V210 H510" />
+              <path class="tree__edge" d="M510 210 V180 H760" />
+              <path class="tree__edge" d="M510 210 V240 H760" />
+              <path class="tree__edge tree__edge--hot" d="M370 360 V420 H490" />
+              <path class="tree__edge" d="M490 420 V300 H760" />
+              <path class="tree__edge" d="M490 420 V360 H630" />
+              <path class="tree__edge" d="M630 360 V340 H760" />
+              <path class="tree__edge" d="M630 360 V380 H760" />
+              <path class="tree__edge tree__edge--hot" d="M490 420 V480 H610" />
+              <path class="tree__edge" d="M610 480 V435 H760" />
+              <path class="tree__edge" d="M610 480 V470 H760" />
+              <path class="tree__edge tree__edge--hot" d="M610 480 V525 H690" />
+              <path class="tree__edge" d="M690 525 V510 H760" />
+              <path class="tree__edge tree__edge--hot" d="M690 525 V560 H760" />
+            </g>
+            <g class="tree__nodes">
+              <circle class="tree__node tree__node--hot" cx="130" cy="300" r="4" />
+              <circle class="tree__node tree__node--hot" cx="250" cy="330" r="4" />
+              <circle class="tree__node tree__node--hot" cx="370" cy="360" r="5" />
+              <circle class="tree__node" cx="510" cy="210" r="4" />
+              <circle class="tree__node tree__node--hot" cx="490" cy="420" r="4" />
+              <circle class="tree__node" cx="630" cy="360" r="4" />
+              <circle class="tree__node tree__node--hot" cx="610" cy="480" r="4" />
+              <circle class="tree__node tree__node--hot" cx="690" cy="525" r="4" />
+            </g>
+            <g class="tree__clades">
+              <text class="tree__clade" x="22" y="292">ARCHOSAURIA</text>
+              <text class="tree__clade" x="140" y="322">AVEMETATARSALIA</text>
+              <text class="tree__clade tree__clade--big" x="258" y="352">DINOSAURIA</text>
+              <text class="tree__sub" x="258" y="376">~233 MYA</text>
+              <text class="tree__clade" x="378" y="202">ORNITHISCHIA</text>
+              <text class="tree__sub" x="378" y="226">“bird-hipped”</text>
+              <text class="tree__clade" x="378" y="412">SAURISCHIA</text>
+              <text class="tree__sub" x="378" y="436">“lizard-hipped”</text>
+              <text class="tree__clade" x="498" y="352">SAUROPODOMORPHA</text>
+              <text class="tree__clade" x="498" y="472">THEROPODA</text>
+              <text class="tree__clade" x="618" y="517">PARAVES</text>
+            </g>
+            <g class="tree__leaves">
+              <text class="tree__leaf tree__leaf--dim" x="772" y="75">Crocodilians</text>
+              <text class="tree__leaf tree__leaf--dim" x="772" y="145">Pterosaurs</text>
+              <text class="tree__leaf" x="772" y="185">Stegosaurus · Ankylosaurus</text>
+              <text class="tree__leaf" x="772" y="245">Triceratops</text>
+              <text class="tree__leaf" x="772" y="305">Eoraptor · Herrerasaurus*</text>
+              <text class="tree__leaf" x="772" y="345">Plateosaurus</text>
+              <text class="tree__leaf" x="772" y="385">Brachiosaurus · Argentinosaurus</text>
+              <text class="tree__leaf" x="772" y="440">Coelophysis · Dilophosaurus</text>
+              <text class="tree__leaf" x="772" y="475">Allosaurus · Spinosaurus · T. rex</text>
+              <text class="tree__leaf" x="772" y="515">Velociraptor</text>
+              <text class="tree__leaf tree__leaf--hot" x="772" y="565">Archaeopteryx → Birds</text>
+            </g>
+          </svg>
+          <p class="tree__note">*Placement of the earliest dinosaurs is still debated. Tree simplified; branch lengths are not to scale.</p>
+        </div>
+        <div class="decoder">
+          <article class="decoder__item" data-reveal>
+            <span class="decoder__k">01 · Hip architecture</span>
+            <p>Saurischians kept a forward-pointing pubic bone. Ornithischians evolved one that points backward, like a bird’s.</p>
+          </article>
+          <article class="decoder__item" data-reveal>
+            <span class="decoder__k">02 · Upright stance</span>
+            <p>Legs held straight beneath the body gave dinosaurs an efficient stride and supported enormous body sizes later on.</p>
+          </article>
+          <article class="decoder__item" data-reveal>
+            <span class="decoder__k">03 · The bird paradox</span>
+            <p>Birds evolved from “lizard-hipped” theropods, not “bird-hipped” ornithischians. Their bird-like hips evolved separately.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRIASSIC -->
+    <section class="panel era" id="triassic" data-mode="planet" data-era="triassic" data-mya="237" data-drift="0.04" data-label="PERIOD I // TRIASSIC">
+      <span class="chip" data-reveal>Period I · 252 → 201.3 MYA · 51 million years</span>
+      <h2 class="era__title" aria-label="Triassic"><span class="era__stroke" aria-hidden="true">Triassic</span><span class="era__fill" aria-hidden="true">Triassic</span></h2>
+      <div class="col">
+        <p class="lede" data-reveal>All land formed one supercontinent, Pangaea. Its vast interior was hot and dry, with seasonal monsoons along the coasts. The first dinosaurs were small, fast, two-legged animals, and for millions of years they were minor players.</p>
+        <p class="note" data-reveal><span>Field note</span> Between about 234 and 232 MYA, the Carnian Pluvial Episode brought a million years or more of intense rainfall. Dinosaurs diversified rapidly in its wake.</p>
+      </div>
+      <dl class="stats">
+        <div class="stat"><dt>Continents</dt><dd>Pangaea</dd></div>
+        <div class="stat"><dt>Climate</dt><dd>Hot; no polar ice caps</dd></div>
+        <div class="stat"><dt>Flora</dt><dd>Conifers, cycads, ferns</dd></div>
+        <div class="stat"><dt>First dinosaurs</dt><dd>~233 MYA</dd></div>
+      </dl>
+    </section>
+
+    <div data-slot="triassic"></div>
+
+    <!-- END-TRIASSIC -->
+    <section class="panel interlude" id="end-triassic" data-mode="planet" data-era="triassic" data-mya="201.3" data-drift="0.22" data-label="EVENT // END-TRIASSIC EXTINCTION">
+      <div class="col">
+        <span class="chip chip--warn" data-reveal>Extinction event</span>
+        <p class="interlude__num" data-reveal>201.3<small>MYA</small></p>
+        <h2 class="h2" data-split>The end-Triassic extinction</h2>
+        <p class="lede" data-reveal>As Pangaea began to tear apart, the eruptions of the Central Atlantic Magmatic Province flooded the atmosphere with carbon dioxide. About three quarters of species vanished, including most of the crocodile-line rivals that had dominated the land. The dinosaurs survived, and inherited it.</p>
+      </div>
+    </section>
+
+    <!-- JURASSIC -->
+    <section class="panel era" id="jurassic" data-mode="planet" data-era="jurassic" data-mya="199" data-drift="0.45" data-label="PERIOD II // JURASSIC">
+      <span class="chip" data-reveal>Period II · 201.3 → 145 MYA · 56 million years</span>
+      <h2 class="era__title" aria-label="Jurassic"><span class="era__stroke" aria-hidden="true">Jurassic</span><span class="era__fill" aria-hidden="true">Jurassic</span></h2>
+      <div class="col">
+        <p class="lede" data-reveal>Pangaea split into Laurasia in the north and Gondwana in the south. The climate turned warm and humid, and forests of conifers, cycads and ferns spread across the land. Dinosaurs became the dominant land animals and grew to record-breaking sizes.</p>
+      </div>
+      <dl class="stats">
+        <div class="stat"><dt>Continents</dt><dd>Laurasia &amp; Gondwana</dd></div>
+        <div class="stat"><dt>Climate</dt><dd>Warm and humid</dd></div>
+        <div class="stat"><dt>Flora</dt><dd>Conifer forests, ferns</dd></div>
+        <div class="stat"><dt>Milestone</dt><dd>First birds ~150 MYA</dd></div>
+      </dl>
+    </section>
+
+    <div data-slot="jurassic"></div>
+
+    <!-- CRETACEOUS -->
+    <section class="panel era" id="cretaceous" data-mode="planet" data-era="cretaceous" data-mya="143" data-drift="0.76" data-label="PERIOD III // CRETACEOUS">
+      <span class="chip" data-reveal>Period III · 145 → 66 MYA · 79 million years</span>
+      <h2 class="era__title" aria-label="Cretaceous"><span class="era__stroke" aria-hidden="true">Cretaceous</span><span class="era__fill" aria-hidden="true">Cretaceous</span></h2>
+      <div class="col">
+        <p class="lede" data-reveal>Continents drifted toward their modern positions and sea levels rose, flooding their interiors with shallow seas. Flowering plants appeared and spread. Dinosaurs reached their greatest variety: horned, armored, sail-backed, feathered and colossal.</p>
+      </div>
+      <dl class="stats">
+        <div class="stat"><dt>Continents</dt><dd>Nearing modern positions</dd></div>
+        <div class="stat"><dt>Sea level</dt><dd>~100–250 m above today</dd></div>
+        <div class="stat"><dt>Flora</dt><dd>First flowering plants</dd></div>
+        <div class="stat"><dt>Dinosaurs</dt><dd>Peak diversity</dd></div>
+      </dl>
+    </section>
+
+    <div data-slot="cretaceous"></div>
+
+    <!-- IMPACT (pinned) -->
+    <section class="impact" id="impact" data-mode="impact" data-era="impact" data-mya="66.043" data-drift="0.9" data-label="ALERT // K–Pg IMPACT EVENT">
+      <div class="impact__stage">
+        <div class="impact__step">
+          <div class="col">
+            <span class="chip chip--warn">Anomaly detected · 66.043 MYA</span>
+            <h2 class="h2">An object is incoming</h2>
+            <p class="lede">A rock roughly 10 kilometres wide is on a collision course with Earth. On the ground, the last great dinosaurs are going about an ordinary day.</p>
+          </div>
+        </div>
+        <div class="impact__step">
+          <div class="col telemetry">
+            <span class="chip chip--warn">Tracking · Chicxulub impactor</span>
+            <p class="telemetry__big"><span data-range>40,000</span><small>km to impact</small></p>
+            <dl class="telemetry__grid">
+              <div><dt>Time to impact</dt><dd data-eta>33:20.0</dd></div>
+              <div><dt>Velocity</dt><dd>~20 km/s</dd></div>
+              <div><dt>Diameter</dt><dd>~10 km (est. 10–15)</dd></div>
+              <div><dt>Target</dt><dd>Yucatán Peninsula</dd></div>
+            </dl>
+          </div>
+        </div>
+        <div class="impact__step impact__step--center">
+          <p class="impact__word" aria-label="Impact">Impact</p>
+        </div>
+        <div class="impact__step">
+          <div class="col">
+            <span class="chip chip--warn">Consequence cascade</span>
+            <ul class="cascade">
+              <li><b>Billions</b> of times the energy of the Hiroshima bomb, released in an instant</li>
+              <li>A crater <b>~180 km</b> wide and ~20 km deep carved into the Yucatán</li>
+              <li><b>Megatsunamis</b> swept across the Gulf of Mexico</li>
+              <li>Molten debris rained back through the sky, possibly igniting <b>wildfires</b></li>
+              <li>Soot and sulfur <b>blocked sunlight</b>, collapsing photosynthesis for months to years</li>
+            </ul>
+          </div>
+        </div>
+        <div class="impact__step">
+          <div class="col">
+            <span class="chip chip--warn">66,043,000 years ago</span>
+            <h2 class="h2">The age of dinosaurs ended</h2>
+            <p class="lede">About three quarters of all plant and animal species on Earth disappeared, including every dinosaur that could not fly.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AFTERMATH -->
+    <section class="panel" id="aftermath" data-mode="aftermath" data-era="impact" data-mya="66" data-drift="0.9" data-label="CHAPTER 06 // WRITTEN IN STONE">
+      <div class="col">
+        <span class="chip chip--warn" data-reveal>Chapter 06 · The K–Pg boundary</span>
+        <h2 class="h2" data-split>Written in stone</h2>
+        <p class="lede" data-reveal>All over the world, a thin layer of clay marks the moment. It is rich in iridium, a metal rare in Earth’s crust but common in asteroids. In 1980, Luis and Walter Alvarez used it to propose the impact theory. The buried Chicxulub crater, identified about a decade later, was the smoking gun.</p>
+        <p class="lede" data-reveal>At the Tanis fossil site in North Dakota, fish were found with tiny glassy impact spherules lodged in their gills, likely killed within hours of the strike.</p>
+        <dl class="after-stats">
+          <div class="tile"><dt>Species extinct</dt><dd>≈75%</dd></div>
+          <div class="tile"><dt>Crater diameter</dt><dd>≈180<small>km</small></dd></div>
+          <div class="tile"><dt>Asteroid width</dt><dd>≈10<small>km</small></dd></div>
+          <div class="tile"><dt>Impact speed</dt><dd>≈20<small>km/s</small></dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- EPILOGUE -->
+    <section class="panel" id="epilogue" data-mode="specimen" data-specimen="bird" data-era="cenozoic" data-mya="0" data-drift="1" data-after="1" data-label="EPILOGUE // SIGNAL PERSISTS">
+      <div class="col">
+        <span class="chip" data-reveal>Epilogue · Present day</span>
+        <h2 class="h2" data-split>Not every dinosaur died</h2>
+        <p class="lede" data-reveal>One branch of small, feathered theropods survived the catastrophe. Their descendants are all around you: about 11,000 living species of birds. Every pigeon, penguin and hummingbird is a living dinosaur.</p>
+        <p class="lede" data-reveal>With the giants gone, mammals spread into an emptied world. Sixty-six million years later, one of them is reading this.</p>
+        <div class="actions" data-reveal>
+          <button type="button" class="btn" data-go="#hero"><span>Rewind to 252 MYA</span><i aria-hidden="true">↺</i></button>
+          <button type="button" class="btn btn--ghost" data-go="#lineage"><span>Revisit the family tree</span></button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <p>Figures are mid-range published estimates, and many remain debated among paleontologists. Specimens are procedural holographic reconstructions for illustration, not scientific models.</p>
+      <p class="foot__k">Deep Time Archive · Built with Three.js, GSAP and Lenis</p>
+    </footer>
+  </main>
+
+  <noscript><p class="noscript">This archive needs JavaScript for its 3D reconstructions.</p></noscript>
+</body>
+</html>
