@@ -17,11 +17,16 @@ The 16 photoreal models were generated with Tripo H3.1 image-to-3D (via Higgsfie
 
 `js/models.js` normalises each GLB (principal-axis alignment, head-direction detection with per-species overrides in `js/data.js`, scale-to-fit), samples its surface for the particle target and patches its PBR material with the reveal shader.
 
-To self-host, save optimised copies as `assets/models/<id>.glb` and `assets/thumbs/<id>.webp` and add the ids to `LOCAL_ASSETS` in `js/data.js`. For example, to compress with meshopt and convert textures to WebP:
+### Downloading the models locally
+
+By default the models stream from Higgsfield's CDN. To keep your own copies (recommended for hosting), run this from the repo root on your machine (Node 18+):
 
 ```bash
-npx @gltf-transform/cli optimize in.glb assets/models/trex.glb --compress meshopt --texture-compress webp --texture-size 1024
+npm run models             # downloads all 16 models + thumbnails into assets/ (~90 MB)
+npm run models:optimize    # same, then compresses each model to ~1–2 MB (meshopt + WebP)
 ```
+
+The script saves `assets/models/<id>.glb` and `assets/thumbs/<id>.webp` and updates `LOCAL_ASSETS` in `js/data.js`, so the site loads the local files first. Commit the `assets/` folder to publish them.
 
 The epilogue bird stays a hologram.
 
@@ -38,7 +43,7 @@ All libraries load from the jsDelivr CDN. There is no build step.
 ES modules need to be served over HTTP (opening `index.html` from disk will not work):
 
 ```bash
-npx serve .
+npm start
 # or
 python3 -m http.server 8000
 ```
