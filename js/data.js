@@ -329,7 +329,9 @@ export const BIRD = {
 export const LENGTH_MAX = 36; // metres, scale ruler maximum
 
 // Photoreal models, generated with Tripo H3.1 image-to-3D from reference images.
-// Each loads from assets/models/<id>.glb when present, otherwise from the generation CDN.
+// They stream from the generation CDN. To self-host, put files at assets/models/<id>.glb
+// and assets/thumbs/<id>.webp and list the ids in LOCAL_ASSETS; local copies are tried first.
+export const LOCAL_ASSETS = [];
 // flip / headLow correct the automatic head-end detection for these body shapes.
 const MODEL_CDN = 'https://d8j0ntlcm91z4.cloudfront.net/user_37bkw7MyT63LckpQcXTvoyynvvk/';
 const MODEL_FILES = {
@@ -350,8 +352,31 @@ const MODEL_FILES = {
   triceratops: 'hf_20260924_090135_e50bd11e-3bfe-47b2-a633-5bec831b5aa2',
   trex: 'hf_20260924_090022_94eef19d-450b-4605-bb05-521e434ef6e8',
 };
+// Reference renders the models were generated from, used as index thumbnails.
+const THUMB_FILES = {
+  euparkeria: 'hf_20260924_085855_037a4b67-c10b-4ae2-a815-8354384a2480',
+  eoraptor: 'hf_20260924_085855_8ce3130c-04cf-4e51-b393-be8e92bb6bd7',
+  herrerasaurus: 'hf_20260924_085854_b258c401-7c52-4e46-9c05-a39e245ec320',
+  coelophysis: 'hf_20260924_085855_cfd56b43-3ba6-4ffb-8785-fd98d167dde2',
+  plateosaurus: 'hf_20260924_085855_2ba5fefe-cc22-4113-ab01-646123533f95',
+  dilophosaurus: 'hf_20260924_085855_3e8f65c1-cd05-420f-b74b-d5baca4ac61d',
+  stegosaurus: 'hf_20260924_085855_2e8105de-bb3b-42c4-bc2e-e5b28e5951e8',
+  brachiosaurus: 'hf_20260924_085855_1d5dbb82-fa1d-4c56-9cf5-ed9cae3832ff',
+  allosaurus: 'hf_20260924_085855_c993b0cd-090a-4871-8829-2cd76d7924ee',
+  archaeopteryx: 'hf_20260924_085856_6b81f48b-c182-45b6-8757-eb90134993da',
+  spinosaurus: 'hf_20260924_085855_052c7dd0-7696-49f7-9e52-ba80b7ba2f1b',
+  argentinosaurus: 'hf_20260924_085855_d3818d89-ebb5-4d2d-8b3e-0658d97543e8',
+  velociraptor: 'hf_20260924_085932_b478de7f-a46c-432e-93a0-b5c802c14626',
+  ankylosaurus: 'hf_20260924_085932_a61ab11f-ac37-4803-ad50-e56d142c9274',
+  triceratops: 'hf_20260924_085931_7e978f81-8e8a-4be4-ac87-04b84f44ede8',
+  trex: 'hf_20260924_085933_b1b51a2b-72a0-4657-a99a-70cf08a3b5ec',
+};
+export const THUMBS = Object.fromEntries(
+  Object.entries(THUMB_FILES).map(([id, f]) => [id, [...(LOCAL_ASSETS.includes(id) ? [`assets/thumbs/${id}.webp`] : []), `${MODEL_CDN}${f}_min.webp`]])
+);
+
 export const MODELS = Object.fromEntries(
-  Object.entries(MODEL_FILES).map(([id, f]) => [id, { sources: [`assets/models/${id}.glb`, `${MODEL_CDN}${f}.glb`] }])
+  Object.entries(MODEL_FILES).map(([id, f]) => [id, { sources: [...(LOCAL_ASSETS.includes(id) ? [`assets/models/${id}.glb`] : []), `${MODEL_CDN}${f}.glb`] }])
 );
 MODELS.stegosaurus.headLow = true;
 MODELS.velociraptor.flip = true;

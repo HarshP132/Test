@@ -15,6 +15,8 @@ export class Hud {
     this.eraEl = document.querySelector('[data-hud-era]');
     this.secEl = document.querySelector('[data-hud-section]');
     this.pctEl = document.querySelector('[data-hud-pct]');
+    this.meshEl = document.querySelector('[data-hud-mesh]');
+    this.meshVal = this.meshEl.querySelector('b');
     this.xyEl = document.querySelector('[data-hud-xy]');
     this.marker = document.querySelector('.tl__marker');
     this.markerVal = document.querySelector('.tl__val');
@@ -58,6 +60,16 @@ export class Hud {
 
   setProgress(p) {
     this.pctEl.textContent = String(Math.round(p * 100)).padStart(3, '0');
+  }
+
+  // Streaming state of the photoreal model for the current specimen (null hides it).
+  setMesh(p) {
+    if (p == null || p < 0) { this.meshEl.hidden = true; return; }
+    this.meshEl.hidden = false;
+    const done = p >= 1;
+    this.meshEl.classList.toggle('is-done', done);
+    const txt = done ? 'LOCKED' : String(Math.round(p * 100)).padStart(3, '0');
+    if (this.meshVal.textContent !== txt) this.meshVal.textContent = txt;
   }
 
   setPointer(x, y) {

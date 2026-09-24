@@ -113,6 +113,8 @@ async function boot() {
       const dt = Math.min(0.05, deltaMs / 1000);
       world.render(dt, time);
       hud.updateAnnos(world);
+      const cur = world.mode === 'specimen' ? world.specimen.current : null;
+      hud.setMesh(cur && models?.has(cur) ? models.progress[cur] ?? 0 : null);
       // Adaptive quality: drop resolution if the machine is struggling.
       sampleT += dt; frames++;
       if (sampleT > 3) {
@@ -182,7 +184,7 @@ async function boot() {
         if (world.specimen.show(d.specimen)) sound.whoosh();
         ensureModel(d.specimen);
         const k = specimenOrder.indexOf(d.specimen);
-        specimenOrder.slice(k + 1, k + 3).forEach((id) => ensureModel(id));
+        specimenOrder.slice(k + 1, k + (lowPower ? 2 : 3)).forEach((id) => ensureModel(id));
         const info = d.specimen === 'bird' ? BIRD : SPECIES_BY_ID[d.specimen];
         hud.setAnnos(info?.annotations);
       } else {

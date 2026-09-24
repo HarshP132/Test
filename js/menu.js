@@ -1,5 +1,5 @@
 // Species index: a full-screen archive of every specimen card, with era filters and chapter links.
-import { SPECIES, ERAS, LENGTH_MAX } from './data.js';
+import { SPECIES, ERAS, LENGTH_MAX, THUMBS } from './data.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -41,7 +41,7 @@ export class SpeciesIndex {
         <button type="button" class="scard" data-target="#sp-${s.id}" style="--era:${E.accent}">
           <span class="scard__media">
             <canvas class="scard__sil" data-sil="${s.id}" aria-hidden="true"></canvas>
-            <img class="scard__img" src="assets/thumbs/${s.id}.webp" alt="" loading="lazy" decoding="async">
+            <img class="scard__img" data-srcs="${(THUMBS[s.id] || []).join('|')}" alt="" decoding="async">
             <span class="scard__code">${s.code === 'PRE' ? 'PRE' : s.code}</span>
           </span>
           <span class="scard__body">
@@ -55,14 +55,21 @@ export class SpeciesIndex {
       </li>`;
     }).join('');
 
-    this.grid.querySelectorAll('.scard__img').forEach((img) => {
-      const done = () => img.closest('.scard__media').classList.add('has-img');
-      if (img.complete && img.naturalWidth) done();
-      else img.addEventListener('load', done, { once: true });
-      img.addEventListener('error', () => img.remove(), { once: true });
-    });
     this.shapes = shapes;
     this.silDrawn = false;
+  }
+
+  // Try each thumbnail source in turn; keep the silhouette if none load.
+  loadThumbs() {
+    this.grid.querySelectorAll('.scard__img[data-srcs]').forEach((img) => {
+      const srcs = img.dataset.srcs.split('|').filter(Boolean);
+      img.removeAttribute('data-srcs');
+      let i = 0;
+      const next = () => { if (i < srcs.length) img.src = srcs[i++]; else img.remove(); };
+      img.addEventListener('load', () => img.closest('.scard__media').classList.add('has-img'));
+      img.addEventListener('error', next);
+      next();
+    });
   }
 
   bind() {
@@ -106,6 +113,7 @@ export class SpeciesIndex {
         drawSilhouette(c, this.shapes[c.dataset.sil], ERAS[s.era].accent);
       });
       this.silDrawn = true;
+      this.loadThumbs();
     }
     this.onOpen?.();
     gsap.timeline()

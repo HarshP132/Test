@@ -159,6 +159,7 @@ export class ModelLibrary {
     this.loader = new GLTFLoader();
     this.loader.setMeshoptDecoder(MeshoptDecoder);
     this.queue = Promise.resolve();
+    this.progress = {};
   }
 
   has(id) { return !!this.manifest[id]; }
@@ -168,7 +169,9 @@ export class ModelLibrary {
     if (!this.manifest[id]) return Promise.reject(new Error('no model'));
     if (this.cache.has(id)) return this.cache.get(id);
     const cfg = this.manifest[id];
-    const tryLoad = (i) => this.loader.loadAsync(cfg.sources[i]).catch((e) => {
+    this.progress[id] = 0;
+    const onProgress = (e) => { if (e.total) this.progress[id] = Math.min(0.99, e.loaded / e.total); };
+    const tryLoad = (i) => this.loader.loadAsync(cfg.sources[i], onProgress).catch((e) => {
       if (i + 1 < cfg.sources.length) return tryLoad(i + 1);
       throw e;
     });
@@ -203,10 +206,11 @@ export class ModelLibrary {
         lift: procedural?.lift || 0,
         fromModel: true,
       };
+      this.progress[id] = 1;
       return { id, group, uniforms: u, shape };
     });
     this.cache.set(id, p);
-    p.catch(() => {});
+    p.catch(() => { this.progress[id] = -1; });
     return p;
   }
 
