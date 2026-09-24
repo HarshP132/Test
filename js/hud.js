@@ -68,7 +68,7 @@ export class Hud {
     this.meshEl.hidden = false;
     const done = p >= 1;
     this.meshEl.classList.toggle('is-done', done);
-    const txt = done ? 'LOCKED' : String(Math.round(p * 100)).padStart(3, '0');
+    const txt = done ? 'LOCKED' : `${String(Math.round(p * 100)).padStart(3, '0')}%`;
     if (this.meshVal.textContent !== txt) this.meshVal.textContent = txt;
   }
 
