@@ -19,6 +19,7 @@ const OPTIMIZE = args.has('--optimize');
 
 const { MODELS, THUMBS } = await import(pathToFileURL(path.join(ROOT, 'js/data.js')).href);
 const remote = (list) => list.find((u) => /^https?:/.test(u));
+const size = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.round(n / 1024)} KB`);
 
 const modelDir = path.join(ROOT, 'assets/models');
 const thumbDir = path.join(ROOT, 'assets/thumbs');
@@ -31,7 +32,7 @@ async function download(url, dest) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
   fs.writeFileSync(dest, buf);
-  return `${(buf.length / 1048576).toFixed(1)} MB`;
+  return size(buf.length);
 }
 
 function optimize(file) {
@@ -40,35 +41,43 @@ function optimize(file) {
   execFileSync(npx, ['--yes', '@gltf-transform/cli@4', 'optimize', file, tmp,
     '--compress', 'meshopt', '--texture-compress', 'webp', '--texture-size', '1024'], { stdio: 'ignore' });
   fs.renameSync(tmp, file);
-  return `${(fs.statSync(file).size / 1048576).toFixed(1)} MB`;
+  return size(fs.statSync(file).size);
 }
 
 const ok = [];
+const thumbs = [];
 const failed = [];
 for (const id of Object.keys(MODELS)) {
   const glb = path.join(modelDir, `${id}.glb`);
   const webp = path.join(thumbDir, `${id}.webp`);
+  let note;
   try {
     const m = await download(remote(MODELS[id].sources), glb);
-    const t = THUMBS[id] ? await download(remote(THUMBS[id]), webp) : 'none';
-    let note = `model ${m}, thumb ${t}`;
-    if (OPTIMIZE && m !== 'cached') note += `, optimized to ${optimize(glb)}`;
-    console.log(`✓ ${id.padEnd(16)} ${note}`);
+    note = `model ${m}`;
+    if (OPTIMIZE && m !== 'cached') note += ` → ${optimize(glb)}`;
     ok.push(id);
   } catch (err) {
-    console.log(`✗ ${id.padEnd(16)} ${err.message}`);
+    console.log(`✗ ${id.padEnd(16)} model failed: ${err.message}`);
     failed.push(id);
+    continue;
   }
+  // Thumbnails are optional: the site falls back to the CDN image or a silhouette.
+  const webpUrl = (THUMBS[id] || []).find((u) => /^https?:.*\.webp$/.test(u));
+  try {
+    if (webpUrl) { note += `, thumb ${await download(webpUrl, webp)}`; thumbs.push(id); }
+  } catch {
+    note += ', thumb unavailable (site will use the CDN image)';
+  }
+  console.log(`✓ ${id.padEnd(16)} ${note}`);
 }
 
 // Point the site at the local copies that now exist.
-if (ok.length) {
-  const dataFile = path.join(ROOT, 'js/data.js');
-  const src = fs.readFileSync(dataFile, 'utf8');
-  const list = ok.map((id) => `'${id}'`).join(', ');
-  const next = src.replace(/export const LOCAL_ASSETS = \[[^\]]*\];/, `export const LOCAL_ASSETS = [${list}];`);
-  fs.writeFileSync(dataFile, next);
-}
+const dataFile = path.join(ROOT, 'js/data.js');
+const quote = (ids) => ids.map((id) => `'${id}'`).join(', ');
+const src = fs.readFileSync(dataFile, 'utf8')
+  .replace(/export const LOCAL_ASSETS = \[[^\]]*\];/, `export const LOCAL_ASSETS = [${quote(ok)}];`)
+  .replace(/export const LOCAL_THUMBS = \[[^\]]*\];/, `export const LOCAL_THUMBS = [${quote(thumbs)}];`);
+fs.writeFileSync(dataFile, src);
 
 console.log(`\n${ok.length} downloaded, ${failed.length} failed.`);
 if (ok.length) console.log('js/data.js now loads these from assets/. Serve the folder (npx serve .) and reload.');

@@ -330,8 +330,10 @@ export const LENGTH_MAX = 36; // metres, scale ruler maximum
 
 // Photoreal models, generated with Tripo H3.1 image-to-3D from reference images.
 // They stream from the generation CDN. To self-host, put files at assets/models/<id>.glb
-// and assets/thumbs/<id>.webp and list the ids in LOCAL_ASSETS; local copies are tried first.
+// and assets/thumbs/<id>.webp and list the ids in LOCAL_ASSETS / LOCAL_THUMBS
+// (scripts/fetch-models.mjs does all of this). Local copies are tried first.
 export const LOCAL_ASSETS = [];
+export const LOCAL_THUMBS = [];
 // flip / headLow correct the automatic head-end detection for these body shapes.
 const MODEL_CDN = 'https://d8j0ntlcm91z4.cloudfront.net/user_37bkw7MyT63LckpQcXTvoyynvvk/';
 const MODEL_FILES = {
@@ -372,7 +374,11 @@ const THUMB_FILES = {
   trex: 'hf_20260924_085933_b1b51a2b-72a0-4657-a99a-70cf08a3b5ec',
 };
 export const THUMBS = Object.fromEntries(
-  Object.entries(THUMB_FILES).map(([id, f]) => [id, [...(LOCAL_ASSETS.includes(id) ? [`assets/thumbs/${id}.webp`] : []), `${MODEL_CDN}${f}_min.webp`]])
+  Object.entries(THUMB_FILES).map(([id, f]) => [id, [
+    ...(LOCAL_THUMBS.includes(id) ? [`assets/thumbs/${id}.webp`] : []),
+    `${MODEL_CDN}${f}_min.webp`,
+    `${MODEL_CDN}${f}.png`,
+  ]])
 );
 
 export const MODELS = Object.fromEntries(
