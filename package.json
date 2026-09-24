@@ -1,7 +1,11 @@
 {
   "name": "deep-time-archive",
   "private": true,
+  "type": "module",
   "description": "Scroll-driven 3D journey through 186 million years of dinosaur evolution.",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "npx --yes serve .",
     "models": "node scripts/fetch-models.mjs",
