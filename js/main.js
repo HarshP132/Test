@@ -4,10 +4,9 @@ import { World } from './world.js';
 import { Sound } from './audio.js';
 import { Hud } from './hud.js';
 import { renderSpecies } from './content.js';
-import { ModelLibrary } from './models.js';
 import { SpeciesIndex } from './menu.js';
 
-gsap.registerPlugin(ScrollTrigger, SplitText, ScrambleTextPlugin);
+gsap.registerPlugin(...[window.ScrollTrigger, window.SplitText, window.ScrambleTextPlugin].filter(Boolean));
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const coarse = matchMedia('(pointer: coarse)').matches;
@@ -26,6 +25,11 @@ const loader = {
   bar: document.querySelector('.loader__bar i'),
   msg: document.querySelector('[data-load-msg]'),
   v: { p: 0 },
+  error(err) {
+    const text = err?.message || String(err);
+    this.msg.textContent = `Error: ${text}`.slice(0, 160);
+    this.msg.classList.add('is-error');
+  },
   set(p, msg) {
     gsap.to(this.v, {
       p, duration: 0.4, overwrite: true,
@@ -37,6 +41,36 @@ const loader = {
     if (msg) this.msg.textContent = msg;
   },
 };
+
+// Native-scroll stand-in with the slice of the Lenis API this file uses.
+function nativeScroller() {
+  const subs = [];
+  const emit = () => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    subs.forEach((f) => f({ progress: max > 0 ? scrollY / max : 0, velocity: 0 }));
+  };
+  addEventListener('scroll', emit, { passive: true });
+  return {
+    stop() { document.documentElement.style.overflow = 'hidden'; },
+    start() { document.documentElement.style.overflow = ''; },
+    on(ev, f) { if (ev === 'scroll') subs.push(f); },
+    raf() {},
+    scrollTo(t, o = {}) {
+      const y = typeof t === 'number' ? t : t.getBoundingClientRect().top + scrollY + (o.offset || 0);
+      scrollTo({ top: y, behavior: o.immediate || !o.duration ? 'auto' : 'smooth' });
+    },
+  };
+}
+
+// Run a setup stage without letting a failure stop the rest of the page.
+function stage(name, fn) {
+  try { return fn(); } catch (err) {
+    console.error(`[deep-time] ${name} failed`, err);
+    return undefined;
+  }
+}
+
+let dismissLoader = () => {};
 
 async function boot() {
   renderSpecies();
@@ -60,7 +94,16 @@ async function boot() {
     root.classList.add('no-webgl');
   }
   const procShapes = { ...shapes };
-  const models = world ? new ModelLibrary(MODELS, N) : null;
+  // Model support loads lazily so a problem there can never block the page.
+  let models = null;
+  if (world) {
+    try {
+      const { ModelLibrary } = await import('./models.js');
+      models = new ModelLibrary(MODELS, N);
+    } catch (err) {
+      console.warn('[deep-time] photoreal models disabled', err);
+    }
+  }
   const added = new Set();
   const ensureModel = (id) => {
     if (!models || !models.has(id)) return Promise.resolve(null);
@@ -76,11 +119,22 @@ async function boot() {
 
   loader.set(0.9, 'Calibrating temporal drive');
   await Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 2500))]);
-  if (world) { world.render(0.016, 0); await frame(); }
+  if (world) stage('first frame', () => world.render(0.016, 0));
+  await frame();
   loader.set(1, 'Signal locked');
 
   /* ---------------- Smooth scroll ---------------- */
-  const lenis = new Lenis({ lerp: reduced ? 1 : 0.085, smoothWheel: !reduced, wheelMultiplier: 0.95 });
+  const lenis = stage('smooth scroll', () => new Lenis({ lerp: reduced ? 1 : 0.085, smoothWheel: !reduced, wheelMultiplier: 0.95 })) || nativeScroller();
+
+  // Whatever happens below, the loader goes away: normally via the intro, else this failsafe.
+  let introDone = false;
+  dismissLoader = () => {
+    if (introDone) return;
+    introDone = true;
+    gsap.to(loader.el, { autoAlpha: 0, duration: 0.6, onComplete: () => { loader.el.style.display = 'none'; } });
+    lenis.start();
+  };
+  const failsafe = setTimeout(() => dismissLoader(), 8000);
   lenis.stop();
   lenis.on('scroll', (e) => {
     ScrollTrigger.update();
@@ -90,7 +144,7 @@ async function boot() {
   gsap.ticker.add((t) => lenis.raf(t * 1000));
   gsap.ticker.lagSmoothing(0);
 
-  const index = new SpeciesIndex({
+  stage('species index', () => new SpeciesIndex({
     shapes: procShapes,
     onGo: (target) => {
       const t = document.querySelector(target);
@@ -98,7 +152,7 @@ async function boot() {
     },
     onOpen: () => lenis.stop(),
     onClose: () => lenis.start(),
-  });
+  }));
 
   document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', (e) => {
     e.preventDefault();
@@ -198,21 +252,24 @@ async function boot() {
 
   const sections = [...document.querySelectorAll('main [data-mode]')];
   for (const sec of sections) {
-    if (sec.id === 'impact') buildImpact(sec, world, sound, () => activate(sec));
-    ScrollTrigger.create({
+    if (sec.id === 'impact') stage('impact sequence', () => buildImpact(sec, world, sound, () => activate(sec)));
+    stage('section trigger', () => ScrollTrigger.create({
       trigger: sec,
       start: 'top 55%',
       end: 'bottom 55%',
-      onToggle: (self) => self.isActive && activate(sec),
-    });
+      onToggle: (self) => self.isActive && stage('activate', () => activate(sec)),
+    }));
   }
 
   /* ---------------- Content motion ---------------- */
-  animateContent();
+  stage('content animation', animateContent);
 
   /* ---------------- Intro ---------------- */
-  ScrollTrigger.refresh();
+  stage('layout refresh', () => ScrollTrigger.refresh());
   await new Promise((r) => setTimeout(r, reduced ? 0 : 450));
+  clearTimeout(failsafe);
+  if (introDone) return;
+  introDone = true;
   const intro = gsap.timeline({
     onComplete: () => {
       lenis.start();
@@ -228,13 +285,15 @@ async function boot() {
     world.pose.py = -8;
     world.setMode('hero');
   }
-  const heroSplit = SplitText.create('.hero__title', { type: 'chars', mask: 'chars', charsClass: 'char' });
-  intro
-    .from(heroSplit.chars, { yPercent: 110, duration: 1.3, stagger: 0.05, ease: 'expo.out' }, '-=0.6')
-    .from('.hero__eyebrow, .hero__lede, .hero__cue', { autoAlpha: 0, y: 24, duration: 1, stagger: 0.12, ease: 'power3.out' }, '<0.3')
-    .from('.hud__top, .hud__readout, .hud__meta, .tl', { autoAlpha: 0, duration: 1.2, stagger: 0.1 }, '<')
-    .from('.hud__corner', { scale: 0.4, autoAlpha: 0, duration: 1, stagger: 0.05, ease: 'power3.out' }, '<');
-  activate(document.querySelector('#hero'));
+  stage('hero intro', () => {
+    const heroSplit = SplitText.create('.hero__title', { type: 'chars', mask: 'chars', charsClass: 'char' });
+    intro
+      .from(heroSplit.chars, { yPercent: 110, duration: 1.3, stagger: 0.05, ease: 'expo.out' }, '-=0.6')
+      .from('.hero__eyebrow, .hero__lede, .hero__cue', { autoAlpha: 0, y: 24, duration: 1, stagger: 0.12, ease: 'power3.out' }, '<0.3')
+      .from('.hud__top, .hud__readout, .hud__meta, .tl', { autoAlpha: 0, duration: 1.2, stagger: 0.1 }, '<')
+      .from('.hud__corner', { scale: 0.4, autoAlpha: 0, duration: 1, stagger: 0.05, ease: 'power3.out' }, '<');
+  });
+  stage('activate hero', () => activate(document.querySelector('#hero')));
 }
 
 /* ------------------------------------------------------------------ */
@@ -359,4 +418,13 @@ function buildImpact(sec, world, sound, onActive) {
   });
 }
 
-boot();
+boot().catch((err) => {
+  console.error('[deep-time] boot failed', err);
+  loader.error(err);
+  // Let the reader in to the text content even if the 3D layer could not start.
+  setTimeout(() => {
+    dismissLoader();
+    loader.el.style.display = 'none';
+    document.documentElement.style.overflow = '';
+  }, 4000);
+});
